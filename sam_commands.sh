@@ -1,12 +1,5 @@
-# create an s3 bucket
-aws s3 mb s3://sam-deploy-serverless-app-kuba
-
-# package cloudformation
-aws cloudformation package  --s3-bucket sam-deploy-serverless-app-kuba --template-file template.yaml --output-template-file gen/template-generated.yaml
-
-# deploy 
-aws cloudformation deploy --template-file gen/template-generated.yaml --stack-name sam-deploy-serverless-app-kuba-stack --capabilities CAPABILITY_IAM
-
-# invoke lambda
-aws lambda invoke --function-name sam-deploy-serverless-app-kuba-s-helloworldpython3-GP8VMMD9BZO2 out.json
-
+# Build your deployment package and put into S3
+sam build
+# Create a "stack" with all of the necessary resources
+# Print the API endpoint we can use for testing
+sam deploy --guided

@@ -9,7 +9,7 @@ table = dynamodb.Table(table_name)
 
 def list_handler(event, context):
     print("Received event: " + json.dumps(event, indent=2))   
-    r = table.scan()
+    r = table.scan(Limit=10)
     return {
         'statusCode': '200',
         'body': str(r.get('Items', '')),
