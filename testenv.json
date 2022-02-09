@@ -1,0 +1,5 @@
+{
+  "Parameters": {
+    "ENDPOINT": "http://dynamodb:8000"
+  }
+}
