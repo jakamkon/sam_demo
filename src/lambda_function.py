@@ -32,7 +32,7 @@ def put_handler(event, context):
     ts=datetime.datetime.now().timestamp()
     dt=str(datetime.datetime.now())
     r = table.put_item(
-        Item={'mykey': str(ts), 'dt': dt},
+        Item={'mykey': str(ts), 'dt': dt, "new-key": "new-value"},
         ReturnConsumedCapacity="TOTAL"
     )
     return {
