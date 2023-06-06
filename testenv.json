@@ -1,5 +1,6 @@
 {
   "Parameters": {
-    "ENDPOINT": "http://dynamodb:8000"
+    "ENDPOINT": "http://dynamodb:8000",
+    "TABLE_NAME": "Table"
   }
 }

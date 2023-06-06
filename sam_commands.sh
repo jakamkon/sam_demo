@@ -9,5 +9,5 @@ curl -X POST http://127.0.0.1:3000/put
 curl http://127.0.0.1:3000/list
 
 # Deploy an app
-sam build
+sam build -u
 sam deploy --guided
