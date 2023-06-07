@@ -2,6 +2,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: Create an REST API with lambda as backend.
+
+Conditions:
+  IsProduction: !Equals [!Ref "AWS::StackName", "sam-app-prod"]
+
+
 Resources:
   ApiGatewayApi:
     Type: AWS::Serverless::Api
@@ -16,6 +21,9 @@ Resources:
       Description: List all items in table.
       MemorySize: 128
       Timeout: 60 
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Type: !If [IsProduction, "Canary10Percent5Minutes", "AllAtOnce"]
       Environment:
         Variables:
           TABLE_NAME: !Ref Table
@@ -39,7 +47,10 @@ Resources:
       CodeUri: src/
       Description: Put a random item into a table.
       MemorySize: 128
-      Timeout: 60 
+      Timeout: 60
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Type: !If [IsProduction, "Canary10Percent5Minutes", "AllAtOnce"]
       Environment:
         Variables:
           TABLE_NAME: !Ref Table
