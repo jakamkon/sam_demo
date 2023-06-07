@@ -5,7 +5,6 @@ import datetime
 from pprint import pprint
 
 table_name = os.environ['TABLE_NAME']
-print('SET UP')
 if 'ENDPOINT' in os.environ and os.getenv('ENDPOINT') != 'default':
     print("USING LOCAL ENDPOINT")
     print(os.getenv('ENDPOINT'))
