@@ -1,0 +1,1 @@
+aws dynamodb create-table --table-name SamDemo --attribute-definitions AttributeName=mykey,AttributeType=S --key-schema AttributeName=mykey,KeyType=HASH --billing-mode PAY_PER_REQUEST

@@ -1,1 +1,1 @@
-aws dynamodb create-table --table-name Table --attribute-definitions AttributeName=mykey,AttributeType=S --key-schema AttributeName=mykey,KeyType=HASH --billing-mode PAY_PER_REQUEST --endpoint-url http://localhost:8000
+aws dynamodb create-table --table-name Table --attribute-definitions AttributeName=mykey,AttributeType=S --key-schema AttributeName=mykey,KeyType=HASH --billing-mode PAY_PER_REQUEST --endpoint-url http://localhost:8000 --region eu-central-1

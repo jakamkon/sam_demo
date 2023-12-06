@@ -44,16 +44,16 @@ Parameters:
     Default: "eu-central-1"
   TestingStackName:
     Type: String
-    Default: "sam-demo-codepipeline-dev"
+    Default: "sam-app-pipeline-dev"
   TestingPipelineExecutionRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-pipe-PipelineExecutionRole-OMHX0JI224AU"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-spMdShQ9PeI4"
   TestingCloudFormationExecutionRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionR-16T7VBCFLONC1"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-gJ3cB1xzsmHy"
   TestingArtifactBucket:
     Type: String
-    Default: "devops-kuba-test"
+    Default: "aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-r0hvbeb6lsy7"
   TestingImageRepository:
     Type: String
     # If there are functions with "Image" PackageType in your template,
@@ -65,16 +65,16 @@ Parameters:
     Default: "eu-central-1"
   ProdStackName:
     Type: String
-    Default: "sam-demo-codepipeline-prod"
+    Default: "sam-app-pipeline-prod"
   ProdPipelineExecutionRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod-pip-PipelineExecutionRole-1CAISEG0PCEDH"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod-pipe-PipelineExecutionRole-IO478weKxhxf"
   ProdCloudFormationExecutionExeRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod-CloudFormationExecutionR-19PKJV1T7Z752"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod--CloudFormationExecutionRo-RzrCLsyXTvN7"
   ProdArtifactBucket:
     Type: String
-    Default: "devops-kuba-test"
+    Default: "aws-sam-cli-managed-prod-pipeline--artifactsbucket-aolgbxfdhnyg"
   ProdImageRepository:
     Type: String
     # If there are functions with "Image" PackageType in your template,

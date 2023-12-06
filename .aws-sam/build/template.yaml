@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Create an REST API with lambda as backend.
+Conditions:
+  IsProduction:
+    Fn::Equals:
+    - Ref: AWS::StackName
+    - sam-app-prod
+Resources:
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+  ListLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_function.list_handler
+      Runtime: python3.7
+      CodeUri: ListLambda
+      Description: List all items in table.
+      MemorySize: 128
+      Timeout: 60
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Type:
+          Fn::If:
+          - IsProduction
+          - Canary10Percent5Minutes
+          - AllAtOnce
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+          ENDPOINT: default
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /list
+            Method: GET
+            RestApiId:
+              Ref: ApiGatewayApi
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: Table
+    Metadata:
+      SamResourceId: ListLambda
+  PutLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_function.put_handler
+      Runtime: python3.7
+      CodeUri: PutLambda
+      Description: Put a random item into a table.
+      MemorySize: 128
+      Timeout: 60
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Type:
+          Fn::If:
+          - IsProduction
+          - Canary10Percent5Minutes
+          - AllAtOnce
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+          ENDPOINT: default
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /put
+            Method: POST
+            RestApiId:
+              Ref: ApiGatewayApi
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: Table
+    Metadata:
+      SamResourceId: PutLambda
+  Table:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName:
+        Fn::Sub: SAMTest-${AWS::StackName}
+      PrimaryKey:
+        Name: mykey
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+Outputs:
+  APIGatewayDeploymentURL:
+    Value:
+      Fn::Sub: https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiGatewayApi.Stage}/

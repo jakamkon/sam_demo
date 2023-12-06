@@ -1,0 +1,13 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "sam-demo-pipeline"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-zo4z3vzh3zop"
+s3_prefix = "sam-demo-pipeline"
+region = "eu-central-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+image_repositories = []
+resolve_s3 = true
+parameter_overrides = "GitProviderType=\"GitHub\" FullRepositoryId=\"jakamkon/sam_demo\" MainGitBranch=\"main\" SamTemplate=\"template.yaml\" TestingRegion=\"eu-central-1\" TestingStackName=\"sam-demo-pipeline-testing\" TestingPipelineExecutionRole=\"arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-pipe-PipelineExecutionRole-OMHX0JI224AU\" TestingCloudFormationExecutionRole=\"arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionR-16T7VBCFLONC1\" TestingArtifactBucket=\"devops-kuba-test\" TestingImageRepository=\"\" ProdRegion=\"eu-central-1\" ProdStackName=\"sam-demo-pipeline-prod\" ProdPipelineExecutionRole=\"arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod-pip-PipelineExecutionRole-1CAISEG0PCEDH\" ProdCloudFormationExecutionExeRole=\"arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod-CloudFormationExecutionR-19PKJV1T7Z752\" ProdArtifactBucket=\"devops-kuba-test\" ProdImageRepository=\"\" CodeStarConnectionArn=\"arn:aws:codestar-connections:eu-central-1:848718099117:connection/a90bab49-ce45-4b2f-acc9-553abedbbe19\" FeatureGitBranch=\"Arn\""
