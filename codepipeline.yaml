@@ -175,7 +175,7 @@ Resources:
                 - Name: !Sub ${AWS::StackName}ChangeSet
               RunOrder: 2
 
-        Uncomment and modify the following step for running the unit-tests
+        # Uncomment and modify the following step for running the unit-tests
         - Name: UnitTest
           Actions:
             - Name: UnitTest
@@ -248,7 +248,7 @@ Resources:
                 InputArtifacts:
                   - Name: BuildArtifactAsZip
                 RunOrder: 1
-              Uncomment the following step for running the integration tests
+              # Uncomment the following step for running the integration tests
               - Name: IntegrationTest
                 ActionTypeId:
                   Category: Build
