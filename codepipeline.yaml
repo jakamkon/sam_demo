@@ -104,7 +104,7 @@ Resources:
     Condition: CreateConnection
     Type: AWS::CodeStarConnections::Connection
     Properties:
-      ConnectionName: GitRepositoryConnection
+      ConnectionName: default
       ProviderType: !Ref GitProviderType
 
   #  ____  _            _ _
