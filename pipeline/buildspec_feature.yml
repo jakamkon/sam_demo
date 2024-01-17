@@ -19,4 +19,3 @@ phases:
                     --s3-bucket ${TESTING_ARTIFACT_BUCKET}
                     --no-fail-on-empty-changeset
                     --role-arn ${TESTING_CLOUDFORMATION_EXECUTION_ROLE}
-                    --resolve-s3

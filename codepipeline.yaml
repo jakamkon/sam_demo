@@ -44,16 +44,16 @@ Parameters:
     Default: "eu-central-1"
   TestingStackName:
     Type: String
-    Default: "sam-app-pipeline-dev"
+    Default: "test170124-dev"
   TestingPipelineExecutionRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-spMdShQ9PeI4"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-dnYDeO79VqnE"
   TestingCloudFormationExecutionRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-gJ3cB1xzsmHy"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-fFd8k0idXGgR"
   TestingArtifactBucket:
     Type: String
-    Default: "aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-r0hvbeb6lsy7"
+    Default: "aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-jftcwj3581ez"
   TestingImageRepository:
     Type: String
     # If there are functions with "Image" PackageType in your template,
@@ -65,16 +65,16 @@ Parameters:
     Default: "eu-central-1"
   ProdStackName:
     Type: String
-    Default: "sam-app-pipeline-prod"
+    Default: "test170124-prod"
   ProdPipelineExecutionRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod-pipe-PipelineExecutionRole-IO478weKxhxf"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod-pipe-PipelineExecutionRole-zVDUOuo83jRk"
   ProdCloudFormationExecutionExeRole:
     Type: String
-    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod--CloudFormationExecutionRo-RzrCLsyXTvN7"
+    Default: "arn:aws:iam::848718099117:role/aws-sam-cli-managed-prod--CloudFormationExecutionRo-0QQmRTrg42bt"
   ProdArtifactBucket:
     Type: String
-    Default: "aws-sam-cli-managed-prod-pipeline--artifactsbucket-aolgbxfdhnyg"
+    Default: "aws-sam-cli-managed-prod-pipeline--artifactsbucket-vgvrc1thsfs1"
   ProdImageRepository:
     Type: String
     # If there are functions with "Image" PackageType in your template,
