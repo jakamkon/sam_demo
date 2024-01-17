@@ -84,7 +84,7 @@ Parameters:
   # CodeStarConnectionArn and FeatureGitBranch are required for pipelines for feature branches
   CodeStarConnectionArn:
     Type: String
-    Default: ""
+    Default: "arn:aws:codestar-connections:eu-central-1:848718099117:connection/76863c96-89fc-4dc7-93fd-7814b45569cd"
   FeatureGitBranch:
     Type: String
     Default: ""
