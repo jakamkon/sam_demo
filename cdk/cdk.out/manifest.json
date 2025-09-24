@@ -1,0 +1,234 @@
+{
+  "version": "31.0.0",
+  "artifacts": {
+    "SamCdkStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "SamCdkStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "SamCdkStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "SamCdkStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/3f1425692a30a2bdef258c960b54b42121feab155febb4abedf5363f161c482d.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "SamCdkStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "SamCdkStack.assets"
+      ],
+      "metadata": {
+        "/SamCdkStack/Table": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "TableCD117FA1"
+            }
+          }
+        ],
+        "/SamCdkStack/Table/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TableCD117FA1"
+          }
+        ],
+        "/SamCdkStack/ListLambda/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ListLambdaServiceRole74F269DE"
+          }
+        ],
+        "/SamCdkStack/ListLambda/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ListLambdaServiceRoleDefaultPolicyA4A01000"
+          }
+        ],
+        "/SamCdkStack/ListLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ListLambda6A0688A4"
+          }
+        ],
+        "/SamCdkStack/ListLambda/CurrentVersion/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ListLambdaCurrentVersion77D75341a68d1f4a40ea325bad3146dbb97353e2"
+          }
+        ],
+        "/SamCdkStack/PutLambda/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PutLambdaServiceRole497464C4"
+          }
+        ],
+        "/SamCdkStack/PutLambda/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PutLambdaServiceRoleDefaultPolicyCF049451"
+          }
+        ],
+        "/SamCdkStack/PutLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PutLambdaF8B9F63D"
+          }
+        ],
+        "/SamCdkStack/PutLambda/CurrentVersion/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PutLambdaCurrentVersionA6F937A4b39e2ea07819d000f1a60ba628e1a25c"
+          }
+        ],
+        "/SamCdkStack/ListLambdaAlias/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ListLambdaAliasCD126662"
+          }
+        ],
+        "/SamCdkStack/PutLambdaAlias/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PutLambdaAliasEBF49F6B"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApi487126F0"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiCloudWatchRole3D0BA780"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiAccountC25230A9"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiDeployment0C47D32C1faa29dbf1da95e78e448701f2a16e6e"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiDeploymentStageprod806F1F27"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiEndpoint4F185358"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/list/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApilist506D78CA"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/list/GET/ApiPermission.SamCdkStackApiGatewayApi1031DE18.GET..list": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApilistGETApiPermissionSamCdkStackApiGatewayApi1031DE18GETlistC163CDA1"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/list/GET/ApiPermission.Test.SamCdkStackApiGatewayApi1031DE18.GET..list": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApilistGETApiPermissionTestSamCdkStackApiGatewayApi1031DE18GETlist78C8F901"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/list/GET/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApilistGETC9298EF7"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/put/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiputCA05796D"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/put/POST/ApiPermission.SamCdkStackApiGatewayApi1031DE18.POST..put": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiputPOSTApiPermissionSamCdkStackApiGatewayApi1031DE18POSTputA785731D"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/put/POST/ApiPermission.Test.SamCdkStackApiGatewayApi1031DE18.POST..put": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiputPOSTApiPermissionTestSamCdkStackApiGatewayApi1031DE18POSTput0175EB6B"
+          }
+        ],
+        "/SamCdkStack/ApiGatewayApi/Default/put/POST/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiGatewayApiputPOSTEF04C65C"
+          }
+        ],
+        "/SamCdkStack/APIGatewayDeploymentURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "APIGatewayDeploymentURL"
+          }
+        ],
+        "/SamCdkStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/SamCdkStack/CDKMetadata/Condition": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadataAvailable"
+          }
+        ],
+        "/SamCdkStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/SamCdkStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "SamCdkStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}
