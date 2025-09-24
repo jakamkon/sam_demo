@@ -10,24 +10,29 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from concurrent import futures
-from collections import namedtuple
 import copy
 import logging
 import sys
 import threading
+from collections import namedtuple
+from concurrent import futures
 
 from s3transfer.compat import MAXINT
-from s3transfer.compat import six
 from s3transfer.exceptions import CancelledError, TransferNotDoneError
-from s3transfer.utils import FunctionContainer
-from s3transfer.utils import TaskSemaphore
+from s3transfer.utils import FunctionContainer, TaskSemaphore
+
+try:
+    from botocore.context import get_context
+except ImportError:
+
+    def get_context():
+        return None
 
 
 logger = logging.getLogger(__name__)
 
 
-class BaseTransferFuture(object):
+class BaseTransferFuture:
     @property
     def meta(self):
         """The metadata associated to the TransferFuture"""
@@ -54,7 +59,7 @@ class BaseTransferFuture(object):
         raise NotImplementedError('cancel()')
 
 
-class BaseTransferMeta(object):
+class BaseTransferMeta:
     @property
     def call_args(self):
         """The call args used in the transfer request"""
@@ -102,7 +107,7 @@ class TransferFuture(BaseTransferFuture):
         try:
             # Usually the result() method blocks until the transfer is done,
             # however if a KeyboardInterrupt is raised we want want to exit
-            # out of this and propogate the exception.
+            # out of this and propagate the exception.
             return self._coordinator.result()
         except KeyboardInterrupt as e:
             self.cancel()
@@ -116,17 +121,20 @@ class TransferFuture(BaseTransferFuture):
         if not self.done():
             raise TransferNotDoneError(
                 'set_exception can only be called once the transfer is '
-                'complete.')
+                'complete.'
+            )
         self._coordinator.set_exception(exception, override=True)
 
 
 class TransferMeta(BaseTransferMeta):
     """Holds metadata about the TransferFuture"""
+
     def __init__(self, call_args=None, transfer_id=None):
         self._call_args = call_args
         self._transfer_id = transfer_id
         self._size = None
         self._user_context = {}
+        self._etag = None
 
     @property
     def call_args(self):
@@ -148,6 +156,11 @@ class TransferMeta(BaseTransferMeta):
         """A dictionary that requesters can store data in"""
         return self._user_context
 
+    @property
+    def etag(self):
+        """The etag of the stored object for validating multipart downloads"""
+        return self._etag
+
     def provide_transfer_size(self, size):
         """A method to provide the size of a transfer request
 
@@ -157,9 +170,19 @@ class TransferMeta(BaseTransferMeta):
         """
         self._size = size
 
+    def provide_object_etag(self, etag):
+        """A method to provide the etag of a transfer request
 
-class TransferCoordinator(object):
+        By providing this value, the TransferManager will validate
+        multipart downloads by supplying an IfMatch parameter with
+        the etag as the value to GetObject requests.
+        """
+        self._etag = etag
+
+
+class TransferCoordinator:
     """A helper class for managing TransferFuture"""
+
     def __init__(self, transfer_id=None):
         self.transfer_id = transfer_id
         self._status = 'not-started'
@@ -175,8 +198,7 @@ class TransferCoordinator(object):
         self._failure_cleanups_lock = threading.Lock()
 
     def __repr__(self):
-        return '%s(transfer_id=%s)' % (
-            self.__class__.__name__, self.transfer_id)
+        return f'{self.__class__.__name__}(transfer_id={self.transfer_id})'
 
     @property
     def exception(self):
@@ -294,8 +316,9 @@ class TransferCoordinator(object):
         with self._lock:
             if self.done():
                 raise RuntimeError(
-                    'Unable to transition from done state %s to non-done '
-                    'state %s.' % (self.status, desired_state))
+                    f'Unable to transition from done state {self.status} to non-done '
+                    f'state {desired_state}.'
+                )
             self._status = desired_state
 
     def submit(self, executor, task, tag=None):
@@ -314,15 +337,15 @@ class TransferCoordinator(object):
         :returns: A future representing the submitted task
         """
         logger.debug(
-            "Submitting task %s to executor %s for transfer request: %s." % (
-                task, executor, self.transfer_id)
+            f"Submitting task {task} to executor {executor} for transfer request: {self.transfer_id}."
         )
         future = executor.submit(task, tag=tag)
         # Add this created future to the list of associated future just
         # in case it is needed during cleanups.
         self.add_associated_future(future)
         future.add_done_callback(
-            FunctionContainer(self.remove_associated_future, future))
+            FunctionContainer(self.remove_associated_future, future)
+        )
         return future
 
     def done(self):
@@ -354,7 +377,8 @@ class TransferCoordinator(object):
         """Adds a callback to call upon failure"""
         with self._failure_cleanups_lock:
             self._failure_cleanups.append(
-                FunctionContainer(function, *args, **kwargs))
+                FunctionContainer(function, *args, **kwargs)
+            )
 
     def announce_done(self):
         """Announce that future is done running and run associated callbacks
@@ -393,17 +417,18 @@ class TransferCoordinator(object):
         try:
             callback()
         # We do not want a callback interrupting the process, especially
-        # in the failure cleanups. So log and catch, the excpetion.
+        # in the failure cleanups. So log and catch, the exception.
         except Exception:
-            logger.debug("Exception raised in %s." % callback, exc_info=True)
+            logger.debug(f"Exception raised in {callback}.", exc_info=True)
 
 
-class BoundedExecutor(object):
+class BoundedExecutor:
     EXECUTOR_CLS = futures.ThreadPoolExecutor
 
-    def __init__(self, max_size, max_num_threads, tag_semaphores=None,
-                 executor_cls=None):
-        """An executor implentation that has a maximum queued up tasks
+    def __init__(
+        self, max_size, max_num_threads, tag_semaphores=None, executor_cls=None
+    ):
+        """An executor implementation that has a maximum queued up tasks
 
         The executor will block if the number of tasks that have been
         submitted and is currently working on is past its maximum.
@@ -449,7 +474,7 @@ class BoundedExecutor(object):
             False, if not to wait and raise an error if not able to submit
             a task.
 
-        :returns: The future assocaited to the submitted task
+        :returns: The future associated to the submitted task
         """
         semaphore = self._semaphore
         # If a tag was provided, use the semaphore associated to that
@@ -462,9 +487,12 @@ class BoundedExecutor(object):
         # Create a callback to invoke when task is done in order to call
         # release on the semaphore.
         release_callback = FunctionContainer(
-            semaphore.release, task.transfer_id, acquire_token)
+            semaphore.release, task.transfer_id, acquire_token
+        )
         # Submit the task to the underlying executor.
-        future = ExecutorFuture(self._executor.submit(task))
+        # Pass the current context to ensure child threads persist the
+        # parent thread's context.
+        future = ExecutorFuture(self._executor.submit(task, get_context()))
         # Add the Semaphore.release() callback to the future such that
         # it is invoked once the future completes.
         future.add_done_callback(release_callback)
@@ -474,7 +502,7 @@ class BoundedExecutor(object):
         self._executor.shutdown(wait)
 
 
-class ExecutorFuture(object):
+class ExecutorFuture:
     def __init__(self, future):
         """A future returned from the executor
 
@@ -494,23 +522,26 @@ class ExecutorFuture(object):
     def add_done_callback(self, fn):
         """Adds a callback to be completed once future is done
 
-        :parm fn: A callable that takes no arguments. Note that is different
+        :param fn: A callable that takes no arguments. Note that is different
             than concurrent.futures.Future.add_done_callback that requires
             a single argument for the future.
         """
+
         # The done callback for concurrent.futures.Future will always pass a
         # the future in as the only argument. So we need to create the
         # proper signature wrapper that will invoke the callback provided.
         def done_callback(future_passed_to_callback):
             return fn()
+
         self._future.add_done_callback(done_callback)
 
     def done(self):
         return self._future.done()
 
 
-class BaseExecutor(object):
+class BaseExecutor:
     """Base Executor class implementation needed to work with s3transfer"""
+
     def __init__(self, max_workers=None):
         pass
 
@@ -523,6 +554,7 @@ class BaseExecutor(object):
 
 class NonThreadedExecutor(BaseExecutor):
     """A drop-in replacement non-threaded version of ThreadPoolExecutor"""
+
     def submit(self, fn, *args, **kwargs):
         future = NonThreadedExecutorFuture()
         try:
@@ -532,7 +564,9 @@ class NonThreadedExecutor(BaseExecutor):
             e, tb = sys.exc_info()[1:]
             logger.debug(
                 'Setting exception for %s to %s with traceback %s',
-                future, e, tb
+                future,
+                e,
+                tb,
             )
             future.set_exception_info(e, tb)
         return future
@@ -541,12 +575,13 @@ class NonThreadedExecutor(BaseExecutor):
         pass
 
 
-class NonThreadedExecutorFuture(object):
+class NonThreadedExecutorFuture:
     """The Future returned from NonThreadedExecutor
 
     Note that this future is **not** thread-safe as it is being used
     from the context of a non-threaded environment.
     """
+
     def __init__(self):
         self._result = None
         self._exception = None
@@ -565,8 +600,7 @@ class NonThreadedExecutorFuture(object):
 
     def result(self, timeout=None):
         if self._exception:
-            six.reraise(
-                type(self._exception), self._exception, self._traceback)
+            raise self._exception.with_traceback(self._traceback)
         return self._result
 
     def _set_done(self):

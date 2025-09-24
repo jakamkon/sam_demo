@@ -16,7 +16,7 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: lambda_function.list_handler
-      Runtime: python3.7
+      Runtime: python3.12
       CodeUri: src/
       Description: List all items in table.
       MemorySize: 128
@@ -43,7 +43,7 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: lambda_function.put_handler
-      Runtime: python3.7
+      Runtime: python3.12
       CodeUri: src/
       Description: Put a random item into a table.
       MemorySize: 128

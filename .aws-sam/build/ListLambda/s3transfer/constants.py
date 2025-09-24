@@ -12,17 +12,27 @@
 # language governing permissions and limitations under the License.
 import s3transfer
 
-
 KB = 1024
 MB = KB * KB
+GB = MB * KB
 
 ALLOWED_DOWNLOAD_ARGS = [
+    'ChecksumMode',
     'VersionId',
     'SSECustomerAlgorithm',
     'SSECustomerKey',
     'SSECustomerKeyMD5',
     'RequestPayer',
+    'ExpectedBucketOwner',
 ]
 
-USER_AGENT = 's3transfer/%s' % s3transfer.__version__
-PROCESS_USER_AGENT = '%s processpool' % USER_AGENT
+FULL_OBJECT_CHECKSUM_ARGS = [
+    'ChecksumCRC32',
+    'ChecksumCRC32C',
+    'ChecksumCRC64NVME',
+    'ChecksumSHA1',
+    'ChecksumSHA256',
+]
+
+USER_AGENT = f's3transfer/{s3transfer.__version__}'
+PROCESS_USER_AGENT = f'{USER_AGENT} processpool'

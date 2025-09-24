@@ -10,39 +10,43 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-import random
-import time
 import functools
+import logging
 import math
 import os
+import random
 import socket
 import stat
 import string
-import logging
 import threading
-import io
 from collections import defaultdict
 
-from botocore.exceptions import IncompleteReadError
-from botocore.exceptions import ReadTimeoutError
+from botocore.exceptions import (
+    IncompleteReadError,
+    ReadTimeoutError,
+    ResponseStreamingError,
+)
+from botocore.httpchecksum import DEFAULT_CHECKSUM_ALGORITHM, AwsChunkedWrapper
+from botocore.utils import is_s3express_bucket
 
-from s3transfer.compat import SOCKET_ERROR
-from s3transfer.compat import rename_file
-from s3transfer.compat import seekable
-from s3transfer.compat import fallocate
-
+from s3transfer.compat import SOCKET_ERROR, fallocate, rename_file
+from s3transfer.constants import FULL_OBJECT_CHECKSUM_ARGS
 
 MAX_PARTS = 10000
 # The maximum file size you can upload via S3 per request.
 # See: http://docs.aws.amazon.com/AmazonS3/latest/dev/UploadingObjects.html
 # and: http://docs.aws.amazon.com/AmazonS3/latest/dev/qfacts.html
-MAX_SINGLE_UPLOAD_SIZE = 5 * (1024 ** 3)
-MIN_UPLOAD_CHUNKSIZE = 5 * (1024 ** 2)
+MAX_SINGLE_UPLOAD_SIZE = 5 * (1024**3)
+MIN_UPLOAD_CHUNKSIZE = 5 * (1024**2)
 logger = logging.getLogger(__name__)
 
 
 S3_RETRYABLE_DOWNLOAD_ERRORS = (
-    socket.timeout, SOCKET_ERROR, ReadTimeoutError, IncompleteReadError
+    socket.timeout,
+    SOCKET_ERROR,
+    ReadTimeoutError,
+    IncompleteReadError,
+    ResponseStreamingError,
 )
 
 
@@ -51,23 +55,28 @@ def random_file_extension(num_digits=8):
 
 
 def signal_not_transferring(request, operation_name, **kwargs):
-    if operation_name in ['PutObject', 'UploadPart'] and \
-            hasattr(request.body, 'signal_not_transferring'):
+    if operation_name in ['PutObject', 'UploadPart'] and hasattr(
+        request.body, 'signal_not_transferring'
+    ):
         request.body.signal_not_transferring()
 
 
 def signal_transferring(request, operation_name, **kwargs):
-    if operation_name in ['PutObject', 'UploadPart'] and \
-            hasattr(request.body, 'signal_transferring'):
-        request.body.signal_transferring()
+    if operation_name in ['PutObject', 'UploadPart']:
+        body = request.body
+        if isinstance(body, AwsChunkedWrapper):
+            body = getattr(body, '_raw', None)
+        if hasattr(body, 'signal_transferring'):
+            body.signal_transferring()
 
 
 def calculate_num_parts(size, part_size):
     return int(math.ceil(size / float(part_size)))
 
 
-def calculate_range_parameter(part_size, part_index, num_parts,
-                              total_size=None):
+def calculate_range_parameter(
+    part_size, part_index, num_parts, total_size=None
+):
     """Calculate the range parameter for multipart downloads/copies
 
     :type part_size: int
@@ -91,7 +100,7 @@ def calculate_range_parameter(part_size, part_index, num_parts,
             end_range = str(total_size - 1)
     else:
         end_range = start_range + part_size - 1
-    range_param = 'bytes=%s-%s' % (start_range, end_range)
+    range_param = f'bytes={start_range}-{end_range}'
     return range_param
 
 
@@ -118,8 +127,7 @@ def get_callbacks(transfer_future, callback_type):
         if hasattr(subscriber, callback_name):
             callbacks.append(
                 functools.partial(
-                    getattr(subscriber, callback_name),
-                    future=transfer_future
+                    getattr(subscriber, callback_name), future=transfer_future
                 )
             )
     return callbacks
@@ -141,25 +149,32 @@ def invoke_progress_callbacks(callbacks, bytes_transferred):
             callback(bytes_transferred=bytes_transferred)
 
 
-def get_filtered_dict(original_dict, whitelisted_keys):
-    """Gets a dictionary filtered by whitelisted keys
+def get_filtered_dict(
+    original_dict, whitelisted_keys=None, blocklisted_keys=None
+):
+    """Gets a dictionary filtered by whitelisted and blocklisted keys.
 
     :param original_dict: The original dictionary of arguments to source keys
         and values.
     :param whitelisted_key: A list of keys to include in the filtered
         dictionary.
+    :param blocklisted_key: A list of keys to exclude in the filtered
+        dictionary.
 
     :returns: A dictionary containing key/values from the original dictionary
-        whose key was included in the whitelist
+        whose key was included in the whitelist and/or not included in the
+        blocklist.
     """
     filtered_dict = {}
     for key, value in original_dict.items():
-        if key in whitelisted_keys:
+        if (whitelisted_keys and key in whitelisted_keys) or (
+            blocklisted_keys and key not in blocklisted_keys
+        ):
             filtered_dict[key] = value
     return filtered_dict
 
 
-class CallArgs(object):
+class CallArgs:
     def __init__(self, **kwargs):
         """A class that records call arguments
 
@@ -171,30 +186,31 @@ class CallArgs(object):
             setattr(self, arg, value)
 
 
-class FunctionContainer(object):
+class FunctionContainer:
     """An object that contains a function and any args or kwargs to call it
 
     When called the provided function will be called with provided args
     and kwargs.
     """
+
     def __init__(self, func, *args, **kwargs):
         self._func = func
         self._args = args
         self._kwargs = kwargs
 
     def __repr__(self):
-        return 'Function: %s with args %s and kwargs %s' % (
-            self._func, self._args, self._kwargs)
+        return f'Function: {self._func} with args {self._args} and kwargs {self._kwargs}'
 
     def __call__(self):
         return self._func(*self._args, **self._kwargs)
 
 
-class CountCallbackInvoker(object):
+class CountCallbackInvoker:
     """An abstraction to invoke a callback when a shared count reaches zero
 
     :param callback: Callback invoke when finalized count reaches zero
     """
+
     def __init__(self, callback):
         self._lock = threading.Lock()
         self._callback = callback
@@ -221,7 +237,8 @@ class CountCallbackInvoker(object):
         with self._lock:
             if self._count == 0:
                 raise RuntimeError(
-                    'Counter is at zero. It cannot dip below zero')
+                    'Counter is at zero. It cannot dip below zero'
+                )
             self._count -= 1
             if self._is_finalized and self._count == 0:
                 self._callback()
@@ -238,24 +255,33 @@ class CountCallbackInvoker(object):
                 self._callback()
 
 
-class OSUtils(object):
+class OSUtils:
     _MAX_FILENAME_LEN = 255
 
     def get_file_size(self, filename):
         return os.path.getsize(filename)
 
     def open_file_chunk_reader(self, filename, start_byte, size, callbacks):
-        return ReadFileChunk.from_filename(filename, start_byte,
-                                           size, callbacks,
-                                           enable_callbacks=False)
+        return ReadFileChunk.from_filename(
+            filename, start_byte, size, callbacks, enable_callbacks=False
+        )
 
-    def open_file_chunk_reader_from_fileobj(self, fileobj, chunk_size,
-                                            full_file_size, callbacks,
-                                            close_callbacks=None):
+    def open_file_chunk_reader_from_fileobj(
+        self,
+        fileobj,
+        chunk_size,
+        full_file_size,
+        callbacks,
+        close_callbacks=None,
+    ):
         return ReadFileChunk(
-            fileobj, chunk_size, full_file_size,
-            callbacks=callbacks, enable_callbacks=False,
-            close_callbacks=close_callbacks)
+            fileobj,
+            chunk_size,
+            full_file_size,
+            callbacks=callbacks,
+            enable_callbacks=False,
+            close_callbacks=close_callbacks,
+        )
 
     def open(self, filename, mode):
         return open(filename, mode)
@@ -305,19 +331,19 @@ class OSUtils(object):
         suffix = os.extsep + random_file_extension()
         path = os.path.dirname(filename)
         name = os.path.basename(filename)
-        temp_filename = name[:self._MAX_FILENAME_LEN - len(suffix)] + suffix 
+        temp_filename = name[: self._MAX_FILENAME_LEN - len(suffix)] + suffix
         return os.path.join(path, temp_filename)
 
     def allocate(self, filename, size):
         try:
             with self.open(filename, 'wb') as f:
                 fallocate(f, size)
-        except (OSError, IOError):
+        except OSError:
             self.remove_file(filename)
             raise
 
 
-class DeferredOpenFile(object):
+class DeferredOpenFile:
     def __init__(self, filename, start_byte=0, mode='rb', open_function=open):
         """A class that defers the opening of a file till needed
 
@@ -384,9 +410,16 @@ class DeferredOpenFile(object):
         self.close()
 
 
-class ReadFileChunk(object):
-    def __init__(self, fileobj, chunk_size, full_file_size,
-                 callbacks=None, enable_callbacks=True, close_callbacks=None):
+class ReadFileChunk:
+    def __init__(
+        self,
+        fileobj,
+        chunk_size,
+        full_file_size,
+        callbacks=None,
+        enable_callbacks=True,
+        close_callbacks=None,
+    ):
         """
 
         Given a file object shown below::
@@ -423,8 +456,11 @@ class ReadFileChunk(object):
         self._fileobj = fileobj
         self._start_byte = self._fileobj.tell()
         self._size = self._calculate_file_size(
-            self._fileobj, requested_size=chunk_size,
-            start_byte=self._start_byte, actual_file_size=full_file_size)
+            self._fileobj,
+            requested_size=chunk_size,
+            start_byte=self._start_byte,
+            actual_file_size=full_file_size,
+        )
         # _amount_read represents the position in the chunk and may exceed
         # the chunk size, but won't allow reads out of bounds.
         self._amount_read = 0
@@ -437,8 +473,14 @@ class ReadFileChunk(object):
             self._close_callbacks = close_callbacks
 
     @classmethod
-    def from_filename(cls, filename, start_byte, chunk_size, callbacks=None,
-                      enable_callbacks=True):
+    def from_filename(
+        cls,
+        filename,
+        start_byte,
+        chunk_size,
+        callbacks=None,
+        enable_callbacks=True,
+    ):
         """Convenience factory function to create from a filename.
 
         :type start_byte: int
@@ -469,8 +511,9 @@ class ReadFileChunk(object):
         file_size = os.fstat(f.fileno()).st_size
         return cls(f, chunk_size, file_size, callbacks, enable_callbacks)
 
-    def _calculate_file_size(self, fileobj, requested_size, start_byte,
-                             actual_file_size):
+    def _calculate_file_size(
+        self, fileobj, requested_size, start_byte, actual_file_size
+    ):
         max_chunk_size = actual_file_size - start_byte
         return min(max_chunk_size, requested_size)
 
@@ -505,8 +548,7 @@ class ReadFileChunk(object):
     def seek(self, where, whence=0):
         if whence not in (0, 1, 2):
             # Mimic io's error for invalid whence values
-            raise ValueError(
-                "invalid whence (%s, should be 0, 1 or 2)" % whence)
+            raise ValueError(f"invalid whence ({whence}, should be 0, 1 or 2)")
 
         # Recalculate where based on chunk attributes so seek from file
         # start (whence=0) is always used
@@ -523,7 +565,8 @@ class ReadFileChunk(object):
             bounded_amount_read = min(self._amount_read, self._size)
             amount = bounded_where - bounded_amount_read
             invoke_progress_callbacks(
-                self._callbacks, bytes_transferred=amount)
+                self._callbacks, bytes_transferred=amount
+            )
         self._amount_read = max(where - self._start_byte, 0)
 
     def close(self):
@@ -558,8 +601,9 @@ class ReadFileChunk(object):
         return iter([])
 
 
-class StreamReaderProgress(object):
+class StreamReaderProgress:
     """Wrapper for a read only stream that adds progress callbacks."""
+
     def __init__(self, stream, callbacks=None):
         self._stream = stream
         self._callbacks = callbacks
@@ -576,7 +620,7 @@ class NoResourcesAvailable(Exception):
     pass
 
 
-class TaskSemaphore(object):
+class TaskSemaphore:
     def __init__(self, count):
         """A semaphore for the purpose of limiting the number of tasks
 
@@ -592,13 +636,13 @@ class TaskSemaphore(object):
             needed for API compatibility with the SlidingWindowSemaphore
             implementation.
         :param block: If True, block until it can be acquired. If False,
-            do not block and raise an exception if cannot be aquired.
+            do not block and raise an exception if cannot be acquired.
 
         :returns: A token (can be None) to use when releasing the semaphore
         """
         logger.debug("Acquiring %s", tag)
         if not self._semaphore.acquire(blocking):
-            raise NoResourcesAvailable("Cannot acquire tag '%s'" % tag)
+            raise NoResourcesAvailable(f"Cannot acquire tag '{tag}'")
 
     def release(self, tag, acquire_token):
         """Release the semaphore
@@ -609,7 +653,7 @@ class TaskSemaphore(object):
             class but is needed for API compatibility with the
             SlidingWindowSemaphore implementation.
         """
-        logger.debug("Releasing acquire %s/%s" % (tag, acquire_token))
+        logger.debug(f"Releasing acquire {tag}/{acquire_token}")
         self._semaphore.release()
 
 
@@ -635,6 +679,7 @@ class SlidingWindowSemaphore(TaskSemaphore):
     when the minimum sequence number for a tag is released.
 
     """
+
     def __init__(self, count):
         self._count = count
         # Dict[tag, next_sequence_number].
@@ -655,7 +700,7 @@ class SlidingWindowSemaphore(TaskSemaphore):
         try:
             if self._count == 0:
                 if not blocking:
-                    raise NoResourcesAvailable("Cannot acquire tag '%s'" % tag)
+                    raise NoResourcesAvailable(f"Cannot acquire tag '{tag}'")
                 else:
                     while self._count == 0:
                         self._condition.wait()
@@ -677,7 +722,7 @@ class SlidingWindowSemaphore(TaskSemaphore):
         self._condition.acquire()
         try:
             if tag not in self._tag_sequences:
-                raise ValueError("Attempted to release unknown tag: %s" % tag)
+                raise ValueError(f"Attempted to release unknown tag: {tag}")
             max_sequence = self._tag_sequences[tag]
             if self._lowest_sequence[tag] == sequence_number:
                 # We can immediately process this request and free up
@@ -697,20 +742,26 @@ class SlidingWindowSemaphore(TaskSemaphore):
                 # We can't do anything right now because we're still waiting
                 # for the min sequence for the tag to be released.  We have
                 # to queue this for pending release.
-                self._pending_release.setdefault(
-                    tag, []).append(sequence_number)
+                self._pending_release.setdefault(tag, []).append(
+                    sequence_number
+                )
                 self._pending_release[tag].sort(reverse=True)
             else:
                 raise ValueError(
                     "Attempted to release unknown sequence number "
-                    "%s for tag: %s" % (sequence_number, tag))
+                    f"{sequence_number} for tag: {tag}"
+                )
         finally:
             self._condition.release()
 
 
-class ChunksizeAdjuster(object):
-    def __init__(self, max_size=MAX_SINGLE_UPLOAD_SIZE,
-                 min_size=MIN_UPLOAD_CHUNKSIZE, max_parts=MAX_PARTS):
+class ChunksizeAdjuster:
+    def __init__(
+        self,
+        max_size=MAX_SINGLE_UPLOAD_SIZE,
+        min_size=MIN_UPLOAD_CHUNKSIZE,
+        max_parts=MAX_PARTS,
+    ):
         self.max_size = max_size
         self.min_size = min_size
         self.max_parts = max_parts
@@ -736,12 +787,14 @@ class ChunksizeAdjuster(object):
         if current_chunksize > self.max_size:
             logger.debug(
                 "Chunksize greater than maximum chunksize. "
-                "Setting to %s from %s." % (self.max_size, current_chunksize))
+                f"Setting to {self.max_size} from {current_chunksize}."
+            )
             return self.max_size
         elif current_chunksize < self.min_size:
             logger.debug(
                 "Chunksize less than minimum chunksize. "
-                "Setting to %s from %s." % (self.min_size, current_chunksize))
+                f"Setting to {self.min_size} from {current_chunksize}."
+            )
             return self.min_size
         else:
             return current_chunksize
@@ -757,7 +810,39 @@ class ChunksizeAdjuster(object):
         if chunksize != current_chunksize:
             logger.debug(
                 "Chunksize would result in the number of parts exceeding the "
-                "maximum. Setting to %s from %s." %
-                (chunksize, current_chunksize))
+                f"maximum. Setting to {chunksize} from {current_chunksize}."
+            )
 
         return chunksize
+
+
+def add_s3express_defaults(bucket, extra_args):
+    """
+    This function has been deprecated, but is kept for backwards compatibility.
+    This function is subject to removal in a future release.
+    """
+    if is_s3express_bucket(bucket) and "ChecksumAlgorithm" not in extra_args:
+        # Default Transfer Operations to S3Express to use CRC32
+        extra_args["ChecksumAlgorithm"] = "crc32"
+
+
+def set_default_checksum_algorithm(extra_args):
+    """Set the default algorithm to CRC32 if not specified by the user."""
+    if any(checksum in extra_args for checksum in FULL_OBJECT_CHECKSUM_ARGS):
+        return
+    extra_args.setdefault("ChecksumAlgorithm", DEFAULT_CHECKSUM_ALGORITHM)
+
+
+# NOTE: The following interfaces are considered private and are subject
+# to abrupt breaking changes. Please do not use them directly.
+
+try:
+    from botocore.utils import create_nested_client as create_client
+except ImportError:
+
+    def create_client(session, *args, **kwargs):
+        return session.create_client(*args, **kwargs)
+
+
+def create_nested_client(session, service_name, **kwargs):
+    return create_client(session, service_name, **kwargs)
